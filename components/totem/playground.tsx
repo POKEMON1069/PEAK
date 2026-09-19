@@ -4,22 +4,29 @@ import { useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Copy } from "lucide-react";
 import { categories, registry } from "./registry";
+import { copyText, selectElementText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 
+type CopyState = "idle" | "copied" | "manual";
+
 function CodeBlock({ code }: { code: string }) {
-  const [copied, setCopied] = useState(false);
+  const [state, setState] = useState<CopyState>("idle");
   const timer = useRef<number | null>(null);
+  const preRef = useRef<HTMLPreElement>(null);
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      if (timer.current) window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => setCopied(false), 1600);
-    } catch {
-      // Clipboard access can be blocked; the code is selectable either way.
-      setCopied(false);
+    const copied = await copyText(code);
+    if (copied) {
+      setState("copied");
+    } else {
+      // The clipboard is blocked outright (typically a sandboxed frame without
+      // clipboard-write). Selecting the text turns the failed copy into one
+      // keystroke instead of an error.
+      selectElementText(preRef.current);
+      setState("manual");
     }
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setState("idle"), 2600);
   };
 
   return (
@@ -27,15 +34,25 @@ function CodeBlock({ code }: { code: string }) {
       <button
         type="button"
         onClick={copy}
-        aria-label={copied ? "Copied" : "Copy code"}
+        aria-label={state === "copied" ? "Copied" : "Copy code"}
         className="absolute right-2 top-2 flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] text-muted transition-colors hover:text-foreground"
       >
-        {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-        {copied ? "Copied" : "Copy"}
+        {state === "copied" ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+        {state === "copied" ? "Copied" : state === "manual" ? "Press ⌘C" : "Copy"}
       </button>
-      <pre className="custom-scrollbar max-h-[180px] w-full overflow-auto rounded-control bg-surface p-3 pr-20 text-left text-[11px] leading-relaxed text-muted">
+      <pre
+        ref={preRef}
+        className="custom-scrollbar max-h-[180px] w-full overflow-auto rounded-control bg-surface p-3 pr-24 text-left text-[11px] leading-relaxed text-muted"
+      >
         <code>{code}</code>
       </pre>
+      <span className="sr-only" role="status" aria-live="polite">
+        {state === "copied"
+          ? "Code copied to the clipboard"
+          : state === "manual"
+            ? "Clipboard unavailable. The code is selected — press Control or Command plus C to copy."
+            : ""}
+      </span>
     </div>
   );
 }

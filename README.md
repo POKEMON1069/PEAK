@@ -25,11 +25,12 @@ npm run dev        # http://localhost:3000
 Other scripts:
 
 ```bash
-npm run build       # production build (all routes prerender statically)
-npm run typecheck   # tsc --noEmit
-npm run lint        # eslint, via next lint
-npm run verify:wheel # 400k+ geometry checks on the shared rotation maths
-npm run verify      # typecheck + lint + geometry + build, in one go
+npm run build             # production build (all routes prerender statically)
+npm run typecheck         # tsc --noEmit
+npm run lint              # eslint, via next lint
+npm run verify:wheel      # 400k+ geometry checks on the shared rotation maths
+npm run check:determinism # guards against hydration-unsafe render values
+npm run verify            # all of the above, in one go
 ```
 
 ---
@@ -97,6 +98,11 @@ The ones worth reading:
   slide on release.
 - **Toast** keeps a real queue — three on screen, auto-dismiss, timers cleaned
   up on unmount.
+- **Copy buttons** degrade instead of throwing. The async Clipboard API is
+  blocked by permissions policy in a sandboxed frame (which is exactly how this
+  site gets previewed or embedded), so `lib/clipboard.ts` asks the Permissions
+  API first, falls back to `document.execCommand("copy")`, and if everything is
+  blocked it selects the code and says "press ⌘C" rather than logging an error.
 
 ---
 
@@ -137,6 +143,23 @@ as semantic names (`background`, `surface`, `border`, `muted`, `accent`,
 before first paint by a small inline script in `app/layout.tsx`, so a dark-mode
 visitor never sees a light flash.
 
+### Render determinism
+
+`Math.sin`, `cos`, `tan`, `exp`, `log`, `pow` and `hypot` are *implementation
+defined* in their last bits: Node and the browser genuinely disagree, and a
+one-ulp difference in an SVG attribute is a hydration mismatch React refuses to
+patch up. So no trigonometry runs during render anywhere in this project.
+
+- The wheel's wedge outlines and the interests ring's unit vectors are
+  pre-computed literals (`components/skibidispin/wedge-paths.ts`, `UNIT` in
+  `components/home/interests.tsx`); positioning is multiplication, which IEEE-754
+  specifies exactly.
+- `scripts/check-render-determinism.mjs` enforces this: it fails on any
+  transcendental call in a rendered module (unless allowlisted with a reason
+  showing it never reaches serialized markup), fails if the ring's vector table
+  drifts from `data/interests.ts`, and fails if the prerendered HTML contains an
+  un-rounded float in an SVG geometry attribute.
+
 Motion uses one easing language (`cubic-bezier(0.16, 1, 0.3, 1)` for entrances,
 springs for anything draggable) and every animation has a reduced-motion branch.
 Reduced motion is read through `lib/use-media-query.ts`, which uses
@@ -170,11 +193,11 @@ server and client disagree for those visitors.
 
 ## Verified before handing over
 
-`npm run verify` runs the lot: types, lint, 402,473 rotation-geometry checks and
-a production build with all four routes prerendering. The rendered HTML of every
-route was also checked for the expected structure — six wheel slices with six
-labels, eleven primitives, the full queue, no third-party requests, no
-`target="_blank"`.
+`npm run verify` runs the lot: types, lint, 402,473 rotation-geometry checks, a
+render-determinism audit and a production build with all four routes
+prerendering. The rendered HTML of every route was also checked for the expected
+structure — six wheel slices with six labels, eleven primitives, the full queue,
+no third-party requests, no `target="_blank"`, and no engine-dependent geometry.
 
 Interactive behaviour (spinning the wheel, dragging, playback) was reviewed from
 the code rather than clicked through in a browser: this build environment has no

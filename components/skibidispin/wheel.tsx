@@ -3,27 +3,23 @@
 import { motion, type MotionValue } from "framer-motion";
 import { cn } from "@/lib/utils";
 import type { Entry } from "./types";
-import { usePrefersReducedMotion } from "@/lib/use-media-query";
+import { WEDGE_LABEL, wedgePath } from "./wedge-paths";
 
 const SIZE = 360;
 const RADIUS = SIZE / 2;
-
-function pointOnWheel(angle: number, distance = RADIUS) {
-  const radians = ((angle - 90) * Math.PI) / 180;
-  return {
-    x: RADIUS + distance * Math.cos(radians),
-    y: RADIUS + distance * Math.sin(radians),
-  };
-}
 
 /**
  * The wheel itself: one <svg> whose rotation is driven by a motion value owned
  * by the hook, so the geometry you see and the winner that gets announced come
  * from the same number.
  *
- * Slice `i` is drawn from `i * step - step / 2` to `i * step + step / 2`, i.e.
- * centred on `i * step` — which is exactly what lib/ring.ts assumes when it
- * says division 0 sits under the pointer at rest.
+ * Two things keep this honest and hydration-safe:
+ *
+ *   · the wedge outline is a pre-computed literal (see wedge-paths.ts), and each
+ *     slice is placed with `rotate(k * 360 / n)` — arithmetic, not trig, so the
+ *     server and the browser produce byte-identical attributes;
+ *   · slice `i` is centred on `i * step`, which is exactly what lib/ring.ts
+ *     assumes when it says division 0 sits under the pointer at rest.
  */
 export function Wheel({
   entries,
@@ -38,11 +34,11 @@ export function Wheel({
   disabled: boolean;
   winner: Entry | null;
 }) {
-  const reduceMotion = usePrefersReducedMotion();
   const count = entries.length;
-  const segment = 360 / Math.max(count, 1);
+  const step = 360 / Math.max(count, 1);
   const labelSize = count > 10 ? 9 : count > 7 ? 10.5 : 12;
   const single = count === 1;
+  const outline = wedgePath(count);
 
   return (
     <div className="relative flex items-center justify-center">
@@ -57,40 +53,35 @@ export function Wheel({
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         role="img"
         aria-label={`Wheel with ${count} ${count === 1 ? "entry" : "entries"}`}
-        style={{ rotate: reduceMotion ? 0 : rotation, transformOrigin: "50% 50%" }}
+        style={{ rotate: rotation, transformOrigin: "50% 50%" }}
         className="h-[280px] w-[280px] rounded-full border-[6px] border-surface-elevated shadow-lift sm:h-[360px] sm:w-[360px]"
       >
         {single ? (
           <circle cx={RADIUS} cy={RADIUS} r={RADIUS} fill={entries[0].color} />
         ) : (
           entries.map((entry, index) => {
-            const centre = index * segment;
-            const start = centre - segment / 2;
-            const end = centre + segment / 2;
-            const from = pointOnWheel(start);
-            const to = pointOnWheel(end);
-            const largeArc = segment > 180.5 ? 1 : 0;
-            const label = pointOnWheel(centre, RADIUS * 0.63);
             const isWinner = winner?.id === entry.id;
+            // One rotation per slice. `index * step` is a single IEEE-754
+            // multiply, so it is identical on the server and in the browser.
+            const angle = (index * step).toFixed(3);
 
             return (
-              <g key={entry.id}>
+              <g key={entry.id} transform={`rotate(${angle} ${RADIUS} ${RADIUS})`}>
                 <path
-                  d={`M${RADIUS},${RADIUS} L${from.x.toFixed(2)},${from.y.toFixed(2)} A${RADIUS},${RADIUS} 0 ${largeArc} 1 ${to.x.toFixed(2)},${to.y.toFixed(2)} Z`}
+                  d={outline}
                   fill={entry.color}
                   stroke="hsl(var(--surface-elevated))"
                   strokeWidth={isWinner ? 4 : 1.5}
                   strokeOpacity={isWinner ? 1 : 0.85}
                 />
                 <text
-                  x={label.x}
-                  y={label.y}
+                  x={WEDGE_LABEL.x}
+                  y={WEDGE_LABEL.y}
                   fill="#FFFFFF"
                   fontSize={labelSize}
                   fontWeight={600}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  transform={`rotate(${centre.toFixed(2)} ${label.x.toFixed(2)} ${label.y.toFixed(2)})`}
                   style={{ pointerEvents: "none" }}
                 >
                   {entry.label.length > 16 ? `${entry.label.slice(0, 15)}…` : entry.label}

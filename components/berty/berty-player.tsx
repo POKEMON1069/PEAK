@@ -66,6 +66,14 @@ const SURFACES: Record<
 
 const SURFACE_KEY = "berty:surface";
 
+/**
+ * Equaliser bar heights. Whole numbers from a pre-computed table rather than
+ * `Math.sin` at render time: trigonometry is not bit-identical across engines,
+ * and a difference of one ulp in an SVG attribute is a hydration mismatch.
+ * The x positions are plain multiples, which IEEE-754 does specify exactly.
+ */
+const EQ_BARS = [40, 14, 26, 8, 34, 20, 12, 30, 44, 18, 24, 10, 32, 22, 36, 16] as const;
+
 function Artwork({ color, playing }: { color: string; playing: boolean }) {
   return (
     <div
@@ -78,20 +86,17 @@ function Artwork({ color, playing }: { color: string; playing: boolean }) {
         ))}
         <circle cx="100" cy="100" r="22" fill="rgba(255,255,255,0.92)" />
         <circle cx="100" cy="100" r="5" fill="rgba(0,0,0,0.55)" />
-        {Array.from({ length: 16 }).map((_, index) => {
-          const height = 6 + Math.abs(Math.sin(index * 0.9)) * 34;
-          return (
-            <rect
-              key={index}
-              x={26 + index * 9.5}
-              y={184 - height}
-              width="4"
-              height={height}
-              rx="2"
-              fill="rgba(255,255,255,0.62)"
-            />
-          );
-        })}
+        {EQ_BARS.map((height, index) => (
+          <rect
+            key={index}
+            x={26 + index * 9.5}
+            y={184 - height}
+            width="4"
+            height={height}
+            rx="2"
+            fill="rgba(255,255,255,0.62)"
+          />
+        ))}
       </svg>
       <span
         aria-hidden="true"

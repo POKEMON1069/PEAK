@@ -7,17 +7,42 @@ import { interests } from "@/data/interests";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Reveal } from "@/components/ui/reveal";
 import { useElementSize } from "@/lib/use-element-size";
+import { usePrefersReducedMotion } from "@/lib/use-media-query";
 import { clamp, cn } from "@/lib/utils";
 import { indexUnderPointer, rotationForIndex, shortestDelta, sliceAngle } from "@/lib/ring";
-import { usePrefersReducedMotion } from "@/lib/use-media-query";
 
 const ANGLE_STEP = sliceAngle(interests.length);
 const DRAG_SENSITIVITY = 0.45; // degrees per pixel
 
 /**
- * One entry on the ring. Position and counter-rotation are both derived from
- * the shared `rotation` motion value, so the whole ring moves on the compositor
- * and the labels stay upright at every angle.
+ * Unit vectors for the slots around the ring, starting at the top and going
+ * clockwise: `(sin θ, -cos θ)`.
+ *
+ * These are literals on purpose. `Math.sin`/`Math.cos` are implementation-
+ * defined in the last bits and Node and the browser disagree, which becomes a
+ * hydration mismatch the moment the value lands in a style attribute — React
+ * compares the serialized strings. Multiplication by these constants is exactly
+ * specified, so the server and the browser agree bit for bit.
+ *
+ * One entry per interest, in ring order; `scripts/check-render-determinism.mjs`
+ * fails if this drifts from `data/interests.ts`. Regenerate with:
+ *   x = sin(i * 2π / n),  y = -cos(i * 2π / n)
+ */
+const UNIT = [
+  { x: 0, y: -1 },
+  { x: 0.781831, y: -0.62349 },
+  { x: 0.974928, y: 0.222521 },
+  { x: 0.433884, y: 0.900969 },
+  { x: -0.433884, y: 0.900969 },
+  { x: -0.974928, y: 0.222521 },
+  { x: -0.781831, y: -0.62349 },
+] as const;
+
+/**
+ * One entry on the ring. Its offset is a literal unit vector scaled by the
+ * measured radius, and it is counter-rotated so the label stays upright as the
+ * ring turns — basic multiplication throughout, so SSR and hydration produce
+ * identical markup.
  */
 function OrbitItem({
   label,
@@ -34,19 +59,22 @@ function OrbitItem({
   active: boolean;
   onSelect: () => void;
 }) {
-  const angle = (value: number) => ((index * ANGLE_STEP + value - 90) * Math.PI) / 180;
-
-  const x = useTransform(rotation, (value) => Math.cos(angle(value)) * radius);
-  const y = useTransform(rotation, (value) => Math.sin(angle(value)) * radius);
+  const unit = UNIT[index];
   // Follows the ring live, so the entry nearest the pointer grows as you drag.
   const scale = useTransform(rotation, (value) =>
     indexUnderPointer(value, interests.length) === index ? 1 : 0.86,
   );
+  const counterRotation = useTransform(rotation, (value) => -value);
 
   return (
     <motion.button
       type="button"
-      style={{ x, y, scale }}
+      style={{
+        x: unit.x * radius,
+        y: unit.y * radius,
+        rotate: counterRotation,
+        scale,
+      }}
       onClick={onSelect}
       aria-label={`${label}${active ? " (selected)" : ""}`}
       className={cn(
@@ -70,9 +98,10 @@ export function Interests() {
   const dragStartPointer = useRef(0);
   const dragOffset = useRef(0);
 
-  // The ring is sized from the real box, so items clear the card at any width.
+  // The ring is sized from the measured box, so items clear the card at any
+  // width. Before measurement every item sits exactly on the centre.
   const radius = clamp(width / 2 - 52, 108, 158);
-  // Height follows the radius so the lowest entry never sits under the controls.
+  // Height follows the radius so the lowest entry never sits on the controls.
   const ringHeight = Math.max(288, radius * 2 + 104);
 
   const rotateTo = useCallback(
@@ -97,8 +126,7 @@ export function Interests() {
     [reduceMotion, rotation],
   );
 
-  // If the ring is resized the geometry is unchanged, so re-derive which entry
-  // the pointer is sitting on rather than trusting the stored index.
+  // After a resize the pointer is over whatever the geometry says it is over.
   useEffect(() => {
     if (!width) return;
     setActive(indexUnderPointer(rotation.get(), interests.length));
@@ -109,7 +137,8 @@ export function Interests() {
 
   const handleDragEnd = (_event: unknown, info: { velocity: { x: number } }) => {
     // Project the fling, then snap to whichever entry ends up under the pointer.
-    const projected = dragStartRotation.current + (dragOffset.current + info.velocity.x * 0.12) * DRAG_SENSITIVITY;
+    const projected =
+      dragStartRotation.current + (dragOffset.current + info.velocity.x * 0.12) * DRAG_SENSITIVITY;
     rotateTo(Math.round(-projected / ANGLE_STEP));
   };
 
@@ -127,73 +156,75 @@ export function Interests() {
         />
       </Reveal>
 
-      <div
-        ref={boxRef}
-        tabIndex={0}
-        role="group"
-        aria-label="Interests ring — use the left and right arrow keys to move"
-        onKeyDown={(event) => {
-          if (event.key === "ArrowRight") {
-            event.preventDefault();
-            step(1);
-          }
-          if (event.key === "ArrowLeft") {
-            event.preventDefault();
-            step(-1);
-          }
-        }}
-        style={{ height: ringHeight }}
-        className="relative mx-auto mt-12 flex w-full max-w-3xl items-center justify-center rounded-panel outline-offset-8"
-      >
-        <motion.div
-          drag="x"
-          dragElastic={0}
-          dragMomentum={false}
-          dragConstraints={{ left: 0, right: 0 }}
-          onDragStart={(event) => {
-            dragStartRotation.current = rotation.get();
-            dragStartPointer.current = pointerX(event);
-            dragOffset.current = 0;
+      <div className="relative mx-auto mt-12 w-full max-w-3xl">
+        <div
+          ref={boxRef}
+          tabIndex={0}
+          role="group"
+          aria-label="Interests ring — use the left and right arrow keys to move"
+          onKeyDown={(event) => {
+            if (event.key === "ArrowRight") {
+              event.preventDefault();
+              step(1);
+            }
+            if (event.key === "ArrowLeft") {
+              event.preventDefault();
+              step(-1);
+            }
           }}
-          onDrag={(event) => {
-            // Measured from the pointer, not from the element: the drag is
-            // constrained to zero movement so nothing scrolls sideways.
-            const offset = pointerX(event) - dragStartPointer.current;
-            dragOffset.current = offset;
-            rotation.set(dragStartRotation.current + offset * DRAG_SENSITIVITY);
-          }}
-          onDragEnd={handleDragEnd}
-          className="relative flex h-full w-full cursor-grab items-center justify-center active:cursor-grabbing"
+          style={{ height: ringHeight }}
+          className="relative flex items-center justify-center rounded-panel outline-offset-8"
         >
-          {interests.map((item, index) => (
-            <OrbitItem
-              key={item.id}
-              label={item.label}
-              index={index}
-              radius={radius}
-              rotation={rotation}
-              active={index === active}
-              onSelect={() => (index === active ? undefined : rotateTo(index))}
-            />
-          ))}
-
-          <div
-            aria-live="polite"
-            className="relative z-10 flex min-h-36 w-40 flex-col items-center justify-center gap-2 rounded-panel border border-border bg-surface-elevated p-4 text-center shadow-panel sm:min-h-44 sm:w-48 sm:p-5"
+          <motion.div
+            drag="x"
+            dragElastic={0}
+            dragMomentum={false}
+            dragConstraints={{ left: 0, right: 0 }}
+            onDragStart={(event) => {
+              dragStartRotation.current = rotation.get();
+              dragStartPointer.current = pointerX(event);
+              dragOffset.current = 0;
+            }}
+            onDrag={(event) => {
+              // Measured from the pointer, not from the element: the drag is
+              // constrained to zero movement so nothing scrolls sideways.
+              const offset = pointerX(event) - dragStartPointer.current;
+              dragOffset.current = offset;
+              rotation.set(dragStartRotation.current + offset * DRAG_SENSITIVITY);
+            }}
+            onDragEnd={handleDragEnd}
+            className="relative flex h-full w-full cursor-grab items-center justify-center active:cursor-grabbing"
           >
-            <motion.div
-              key={interests[active].id}
-              initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            {interests.map((item, index) => (
+              <OrbitItem
+                key={item.id}
+                label={item.label}
+                index={index}
+                radius={radius}
+                rotation={rotation}
+                active={index === active}
+                onSelect={() => (index === active ? undefined : rotateTo(index))}
+              />
+            ))}
+
+            <div
+              aria-live="polite"
+              className="relative z-10 flex min-h-36 w-40 flex-col items-center justify-center gap-2 rounded-panel border border-border bg-surface-elevated p-4 text-center shadow-panel sm:min-h-44 sm:w-48 sm:p-5"
             >
-              <p className="text-base font-semibold sm:text-lg">{interests[active].label}</p>
-              <p className="mt-2 text-xs leading-relaxed text-muted sm:text-[13px]">
-                {interests[active].detail}
-              </p>
-            </motion.div>
-          </div>
-        </motion.div>
+              <motion.div
+                key={interests[active].id}
+                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <p className="text-base font-semibold sm:text-lg">{interests[active].label}</p>
+                <p className="mt-2 text-xs leading-relaxed text-muted sm:text-[13px]">
+                  {interests[active].detail}
+                </p>
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
 
         <div className="mt-4 flex items-center justify-center gap-2">
           <button

@@ -5,6 +5,7 @@ import { animate, useMotionValue } from "framer-motion";
 import { DEFAULT_ENTRIES, MAX_ENTRIES, colorFor, type Entry } from "./types";
 import { useWheelSound } from "./use-wheel-sound";
 import { indexUnderPointer, sliceAngle, solveSpin } from "@/lib/ring";
+import { usePrefersReducedMotion } from "@/lib/use-media-query";
 
 const STORAGE_KEY = "skibidispin:entries:v1";
 const SPIN_MS = 4400;
@@ -42,6 +43,7 @@ export function useWheel(initialLabels: string[] = DEFAULT_ENTRIES) {
   const removeRef = useRef(removeAfterSpin);
 
   const { soundOn, toggleSound, soundReady, tick, win } = useWheelSound();
+  const reduceMotion = usePrefersReducedMotion();
 
   entriesRef.current = entries;
   removeRef.current = removeAfterSpin;
@@ -175,6 +177,30 @@ export function useWheel(initialLabels: string[] = DEFAULT_ENTRIES) {
     const turns = MIN_TURNS + Math.floor(Math.random() * (MAX_TURNS - MIN_TURNS + 1));
     const { target } = solveSpin({ from, chosen, count, turns });
 
+    // Announce from whatever rotation the wheel actually ends on, so the result
+    // can never disagree with the wedge under the pointer.
+    const finish = () => {
+      const settled = heading(rotation.get(), count);
+      const result = current[settled];
+      setWinner(result);
+      setHistory((prev) => [result, ...prev].slice(0, 12));
+      setSpinning(false);
+      win();
+      if (removeRef.current) {
+        setEntries((prev) => prev.filter((entry) => entry.id !== result.id));
+      }
+    };
+
+    // Reduced motion: the wheel still lands on the chosen slice, it just gets
+    // there without the four-second ride. Suppressing the rotation entirely
+    // would leave a winner appearing under a pointer that never moved.
+    if (reduceMotion) {
+      rotation.set(target);
+      boundaryRef.current = heading(target, count);
+      finish();
+      return;
+    }
+
     boundaryRef.current = heading(from, count);
     lastTickRef.current = 0;
     const travel = target - from;
@@ -194,20 +220,9 @@ export function useWheel(initialLabels: string[] = DEFAULT_ENTRIES) {
         const progress = Math.min(1, Math.max(0, (value - from) / travel));
         tick(0.15 + (1 - progress) * 0.85);
       },
-      onComplete: () => {
-        // Read the winner off the geometry rather than trusting the plan.
-        const settled = heading(rotation.get(), count);
-        const result = current[settled];
-        setWinner(result);
-        setHistory((prev) => [result, ...prev].slice(0, 12));
-        setSpinning(false);
-        win();
-        if (removeRef.current) {
-          setEntries((prev) => prev.filter((entry) => entry.id !== result.id));
-        }
-      },
+      onComplete: finish,
     });
-  }, [heading, rotation, spinning, tick, win]);
+  }, [heading, reduceMotion, rotation, spinning, tick, win]);
 
   useEffect(() => {
     return () => animationRef.current?.stop();
