@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   Design tokens. Every surface, border and accent in the site resolves back
+   to these values -- there is no hard-coded colour anywhere else in the code.
+   --------------------------------------------------------------------------- */
+
+:root {
+  color-scheme: light;
+
+  --background: 60 40% 97%; /* cream */
+  --foreground: 205 40% 16%; /* ink */
+  --surface: 40 10% 96%;
+  --surface-elevated: 0 0% 100%;
+  --border: 205 15% 88%;
+  --muted: 205 14% 42%;
+  --accent: 78 92% 62%; /* lime */
+  --accent-foreground: 205 60% 10%;
+  --success: 142 70% 34%;
+  --warning: 32 92% 42%;
+  --error: 3 80% 50%;
+
+  --shadow-panel: 0 1px 2px hsl(205 40% 16% / 0.04), 0 12px 32px -12px hsl(205 40% 16% / 0.14);
+  --shadow-lift: 0 2px 4px hsl(205 40% 16% / 0.05), 0 24px 56px -20px hsl(205 40% 16% / 0.22);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --background: 210 60% 8%;
+  --foreground: 60 40% 97%;
+  --surface: 210 45% 11%;
+  --surface-elevated: 210 40% 14%;
+  --border: 210 25% 22%;
+  --muted: 210 16% 68%;
+  --accent: 78 92% 62%;
+  --accent-foreground: 205 60% 8%;
+  --success: 142 60% 52%;
+  --warning: 38 90% 58%;
+  --error: 3 75% 62%;
+
+  --shadow-panel: 0 1px 2px hsl(0 0% 0% / 0.3), 0 16px 40px -16px hsl(0 0% 0% / 0.55);
+  --shadow-lift: 0 2px 6px hsl(0 0% 0% / 0.35), 0 32px 64px -24px hsl(0 0% 0% / 0.65);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background-color: hsl(var(--accent) / 0.45);
+  color: hsl(var(--accent-foreground));
+}
+
+/* One focus treatment for the whole site: only keyboard focus gets a ring. */
+:focus-visible {
+  outline: 2px solid hsl(var(--foreground) / 0.75);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Lenis: native smooth scrolling must stand down while it is driving. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* Range inputs: styled once, reused by Berty and the Totem slider. */
+input[type="range"].range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: hsl(var(--border));
+  cursor: pointer;
+}
+
+input[type="range"].range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 14px;
+  width: 14px;
+  border-radius: 999px;
+  background: currentColor;
+  border: 2px solid hsl(var(--surface-elevated));
+  box-shadow: 0 1px 3px hsl(0 0% 0% / 0.25);
+}
+
+input[type="range"].range::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  border: 2px solid hsl(var(--surface-elevated));
+  border-radius: 999px;
+  background: currentColor;
+}
+
+input[type="range"].range:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
