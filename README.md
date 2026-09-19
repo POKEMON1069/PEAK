@@ -29,6 +29,7 @@ npm run build             # production build (all routes prerender statically)
 npm run typecheck         # tsc --noEmit
 npm run lint              # eslint, via next lint
 npm run verify:wheel      # 400k+ geometry checks on the shared rotation maths
+npm run verify:clipboard  # tests for the clipboard fallback chain
 npm run check:determinism # guards against hydration-unsafe render values
 npm run verify            # all of the above, in one go
 ```
@@ -193,9 +194,9 @@ server and client disagree for those visitors.
 
 ## Verified before handing over
 
-`npm run verify` runs the lot: types, lint, 402,473 rotation-geometry checks, a
-render-determinism audit and a production build with all four routes
-prerendering. The rendered HTML of every route was also checked for the expected
+`npm run verify` runs the lot: types, lint, 402,473 rotation-geometry checks, 20
+clipboard checks, a render-determinism audit and a production build with all
+four routes prerendering. The rendered HTML of every route was also checked for the expected
 structure — six wheel slices with six labels, eleven primitives, the full queue,
 no third-party requests, no `target="_blank"`, and no engine-dependent geometry.
 

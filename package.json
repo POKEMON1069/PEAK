@@ -9,8 +9,9 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "verify:wheel": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/verify-wheel-math.ts",
-    "verify": "npm run typecheck && npm run lint && npm run verify:wheel && npm run build && npm run check:determinism",
-    "check:determinism": "node scripts/check-render-determinism.mjs"
+    "verify": "npm run typecheck && npm run lint && npm run verify:wheel && npm run verify:clipboard && npm run build && npm run check:determinism",
+    "check:determinism": "node scripts/check-render-determinism.mjs",
+    "verify:clipboard": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/verify-clipboard.ts"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
