@@ -3,10 +3,12 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Lenis from "lenis";
+import { gsap, ScrollTrigger } from "@/lib/gsap";
 import { registerScrollDriver } from "@/lib/scroll-lock";
 
 /**
- * Momentum scrolling for the whole document.
+ * Momentum scrolling for the whole document, driven from GSAP's ticker so the
+ * parallax ScrollTriggers and Lenis always agree on where the page is.
  *
  * Two rules keep this from being a liability:
  *   1. it never starts for visitors who asked for reduced motion, and
@@ -20,6 +22,9 @@ export function SmoothScroll() {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     let lenis: Lenis | null = null;
 
+    // GSAP's ticker reports seconds; Lenis wants milliseconds.
+    const tick = (time: number) => lenis?.raf(time * 1000);
+
     const start = () => {
       if (lenis) return;
       lenis = new Lenis({
@@ -28,10 +33,14 @@ export function SmoothScroll() {
         smoothWheel: true,
         touchMultiplier: 1.6,
       });
+      lenis.on("scroll", ScrollTrigger.update);
+      gsap.ticker.add(tick);
+      gsap.ticker.lagSmoothing(0);
       registerScrollDriver(lenis);
     };
 
     const stop = () => {
+      gsap.ticker.remove(tick);
       lenis?.destroy();
       lenis = null;
       registerScrollDriver(null);
@@ -41,15 +50,7 @@ export function SmoothScroll() {
     const onPreferenceChange = () => (media.matches ? stop() : start());
     media.addEventListener("change", onPreferenceChange);
 
-    let frame = 0;
-    const raf = (time: number) => {
-      lenis?.raf(time);
-      frame = requestAnimationFrame(raf);
-    };
-    frame = requestAnimationFrame(raf);
-
     return () => {
-      cancelAnimationFrame(frame);
       media.removeEventListener("change", onPreferenceChange);
       stop();
     };
@@ -60,6 +61,7 @@ export function SmoothScroll() {
   useEffect(() => {
     if (window.location.hash) return;
     window.scrollTo({ top: 0, behavior: "auto" });
+    ScrollTrigger.refresh();
   }, [pathname]);
 
   return null;

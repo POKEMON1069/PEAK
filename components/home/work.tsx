@@ -6,7 +6,6 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { projects, type Project } from "@/data/projects";
 import { ProjectVisual } from "@/components/home/project-visual";
-import { SectionHeading } from "@/components/ui/section-heading";
 import { Reveal } from "@/components/ui/reveal";
 import { usePrefersReducedMotion } from "@/lib/use-media-query";
 
@@ -91,15 +90,12 @@ function StickyProjectCard({ project, index }: { project: Project; index: number
 
 export function Work() {
   return (
-    <section id="work" className="scroll-mt-24 px-6 py-16">
+    <section className="px-6 py-16">
       <Reveal>
-        <SectionHeading
-          align="center"
-          eyebrow="Work"
-          title="Not links. Products, built in."
-          description="Three things I made, each running for real inside this site rather than behind a screenshot."
-          className="mx-auto mb-16"
-        />
+        <p className="mx-auto mb-16 max-w-xl text-center text-base leading-relaxed text-muted">
+          Three things I made, each running for real inside this site rather than
+          behind a screenshot.
+        </p>
       </Reveal>
 
       <div className="flex flex-col gap-10 pb-[12vh]">

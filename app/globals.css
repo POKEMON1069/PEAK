@@ -149,3 +149,165 @@ input[type="range"].range:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Parallax. The layout follows the Osmo parallax resource: a full-height
+   header whose layers are absolutely stacked and moved by GSAP ScrollTrigger
+   at different rates, then a fade into the content beneath. The same layer
+   markup is reused by the section bands further down the page.
+   --------------------------------------------------------------------------- */
+
+.parallax {
+  position: relative;
+  width: 100%;
+}
+
+.parallax__header {
+  position: relative;
+  z-index: 1;
+  height: 100svh;
+  min-height: 560px;
+  overflow: hidden;
+}
+
+.parallax__visuals {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.parallax__sky {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 45% at 50% 15%, hsl(var(--accent) / 0.28), transparent 70%),
+    linear-gradient(180deg, hsl(var(--surface)) 0%, hsl(var(--background)) 100%);
+}
+
+.dark .parallax__sky {
+  background:
+    radial-gradient(60% 45% at 50% 15%, hsl(var(--accent) / 0.18), transparent 70%),
+    linear-gradient(180deg, hsl(210 60% 6%) 0%, hsl(var(--background)) 100%);
+}
+
+.parallax__layers {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.parallax__layer {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+.parallax__layer-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+.parallax__layer-title {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 0 1.5rem;
+  text-align: center;
+  will-change: transform;
+}
+
+.parallax__eyebrow {
+  display: inline-block;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  background: hsl(var(--surface) / 0.7);
+  padding: 0.375rem 1rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: hsl(var(--muted));
+  backdrop-filter: blur(8px);
+}
+
+.parallax__title {
+  margin: 0;
+  font-size: clamp(3.5rem, 12vw, 10.5rem);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  color: hsl(var(--foreground));
+}
+
+/* The band variant keeps the title on one line and slightly smaller. */
+.parallax__title--band {
+  font-size: clamp(2.75rem, 10vw, 8rem);
+  line-height: 0.95;
+}
+
+.parallax__fade {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 5;
+  height: 30%;
+  background: linear-gradient(180deg, hsl(var(--background) / 0) 0%, hsl(var(--background)) 100%);
+  pointer-events: none;
+}
+
+.parallax__content {
+  position: relative;
+  z-index: 2;
+  margin: 0 auto;
+  max-width: 48rem;
+  padding: 3rem 1.5rem 6rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: hsl(var(--background));
+}
+
+.parallax__scroll-hint {
+  margin-top: 4rem;
+  animation: parallax-bob 1.9s ease-in-out infinite;
+}
+
+@keyframes parallax-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+/* Section bands: a shorter parallax header used as a chapter divider. */
+.parallax-band {
+  position: relative;
+  height: 62svh;
+  min-height: 380px;
+  overflow: hidden;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.parallax-band .parallax__fade {
+  height: 45%;
+}
+
+.parallax-band__top-fade {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 5;
+  height: 30%;
+  background: linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--background) / 0) 100%);
+  pointer-events: none;
+}

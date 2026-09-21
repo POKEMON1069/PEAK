@@ -4,16 +4,13 @@ import { Reveal } from "@/components/ui/reveal";
 
 export function Contact() {
   return (
-    <section id="contact" className="scroll-mt-24 px-6 py-24 sm:py-28">
+    <section className="px-6 pb-24 pt-8 sm:pb-28">
       <Reveal>
         <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 rounded-panel border border-border bg-surface-elevated px-6 py-14 text-center shadow-panel sm:px-10 sm:py-16">
           <span className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface text-muted">
             <Mail className="h-5 w-5" strokeWidth={1.75} />
           </span>
 
-          <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-balance sm:text-5xl">
-            Have an idea? Let&apos;s build it.
-          </h2>
           <p className="max-w-md text-base leading-relaxed text-muted">
             Reach out if something here resonates — a project, a collaboration, or
             a good conversation about products.
