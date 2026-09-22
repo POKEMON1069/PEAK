@@ -24,6 +24,22 @@
 
   --shadow-panel: 0 1px 2px hsl(205 40% 16% / 0.04), 0 12px 32px -12px hsl(205 40% 16% / 0.14);
   --shadow-lift: 0 2px 4px hsl(205 40% 16% / 0.05), 0 24px 56px -20px hsl(205 40% 16% / 0.22);
+
+  /* shadcn/ui theme tokens (used by components/ui, mapped onto the palette above) */
+  --card: 0 0% 100%;
+  --card-foreground: 205 40% 16%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 205 40% 16%;
+  --primary: 205 40% 16%;
+  --primary-foreground: 60 40% 97%;
+  --secondary: 40 10% 96%;
+  --secondary-foreground: 205 40% 16%;
+  --muted-foreground: 205 14% 42%;
+  --destructive: 3 80% 50%;
+  --destructive-foreground: 60 40% 97%;
+  --input: 205 15% 88%;
+  --ring: 78 92% 62%;
+  --radius: 0.625rem;
 }
 
 .dark {
@@ -43,6 +59,21 @@
 
   --shadow-panel: 0 1px 2px hsl(0 0% 0% / 0.3), 0 16px 40px -16px hsl(0 0% 0% / 0.55);
   --shadow-lift: 0 2px 6px hsl(0 0% 0% / 0.35), 0 32px 64px -24px hsl(0 0% 0% / 0.65);
+
+  /* shadcn/ui theme tokens (used by components/ui, mapped onto the palette above) */
+  --card: 210 45% 11%;
+  --card-foreground: 60 40% 97%;
+  --popover: 210 40% 14%;
+  --popover-foreground: 60 40% 97%;
+  --primary: 60 40% 97%;
+  --primary-foreground: 210 60% 8%;
+  --secondary: 210 45% 11%;
+  --secondary-foreground: 60 40% 97%;
+  --muted-foreground: 210 16% 68%;
+  --destructive: 3 75% 62%;
+  --destructive-foreground: 60 40% 97%;
+  --input: 210 25% 22%;
+  --ring: 78 92% 62%;
 }
 
 html {
